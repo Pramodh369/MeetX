@@ -15,12 +15,13 @@ function MeetingRoom() {
 
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(false);
+  const [isInitiator, setIsInitiator] = useState(false);
 
   const remoteVideoRef = useRef(null);
   const videoRef = useRef(null);
   const localStreamRef = useRef(null);
   const peerRef = useRef(null);
-const streamRef = useRef(null);
+  const streamRef = useRef(null);
 
   useEffect(() => {
     socket.emit("join-room", roomId);
@@ -31,6 +32,9 @@ const streamRef = useRef(null);
 
     socket.on("receive-message", (data) => {
       setMessages((prev) => [...prev, data]);
+    });
+    socket.on("ready", () => {
+      setIsInitiator(true);
     });
 
     return () => {
@@ -61,6 +65,73 @@ const streamRef = useRef(null);
 
     getCamera();
   }, []);
+  useEffect(() => {
+    if (!isInitiator || !localStreamRef.current || peerRef.current) return;
+
+    const peer = new Peer({
+      initiator: true,
+      trickle: false,
+      stream: localStreamRef.current,
+    });
+
+    peer.on("signal", (data) => {
+      socket.emit("offer", {
+        roomId,
+        signal: data,
+      });
+    });
+
+    peer.on("stream", (stream) => {
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = stream;
+      }
+    });
+
+    peerRef.current = peer;
+  }, [isInitiator, roomId]);
+  useEffect(() => {
+    socket.on("offer", ({ signal }) => {
+      if (peerRef.current) return;
+
+      const peer = new Peer({
+        initiator: false,
+        trickle: false,
+        stream: localStreamRef.current,
+      });
+
+      peer.on("signal", (data) => {
+        socket.emit("answer", {
+          roomId,
+          signal: data,
+        });
+      });
+
+      peer.on("stream", (stream) => {
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = stream;
+        }
+      });
+
+      peer.signal(signal);
+
+      peerRef.current = peer;
+    });
+
+    return () => {
+      socket.off("offer");
+    };
+  }, [roomId]);
+  useEffect(() => {
+    socket.on("answer", ({ signal }) => {
+      if (peerRef.current) {
+        peerRef.current.signal(signal);
+      }
+    });
+
+    return () => {
+      socket.off("answer");
+    };
+  }, []);
 
   const sendMessage = () => {
     if (!message.trim()) return;
@@ -74,8 +145,7 @@ const streamRef = useRef(null);
   };
 
   const toggleMute = () => {
-    const audioTrack =
-      localStreamRef.current?.getAudioTracks()[0];
+    const audioTrack = localStreamRef.current?.getAudioTracks()[0];
 
     if (!audioTrack) return;
 
@@ -85,8 +155,7 @@ const streamRef = useRef(null);
   };
 
   const toggleCamera = () => {
-    const videoTrack =
-      localStreamRef.current?.getVideoTracks()[0];
+    const videoTrack = localStreamRef.current?.getVideoTracks()[0];
 
     if (!videoTrack) return;
 
@@ -102,27 +171,17 @@ const streamRef = useRef(null);
   return (
     <div className="min-h-screen px-6 py-10">
       <div className="mx-auto max-w-7xl">
-
         <div className="mb-8 rounded-3xl border border-white/10 bg-white/5 p-8">
-          <h1 className="text-4xl font-bold">
-            Meeting Room
-          </h1>
+          <h1 className="text-4xl font-bold">Meeting Room</h1>
 
-          <p className="mt-3 text-slate-400">
-            Room ID: {roomId}
-          </p>
+          <p className="mt-3 text-slate-400">Room ID: {roomId}</p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
-
           <div className="lg:col-span-2 rounded-3xl border border-white/10 bg-white/5 p-8">
-
             <div className="grid h-[450px] gap-4 md:grid-cols-2">
-
               <div className="overflow-hidden rounded-2xl bg-slate-800">
-                <h3 className="mb-2 text-center font-semibold">
-                  You
-                </h3>
+                <h3 className="mb-2 text-center font-semibold">You</h3>
 
                 <video
                   ref={videoRef}
@@ -134,9 +193,7 @@ const streamRef = useRef(null);
               </div>
 
               <div className="overflow-hidden rounded-2xl bg-slate-800">
-                <h3 className="mb-2 text-center font-semibold">
-                  Participant
-                </h3>
+                <h3 className="mb-2 text-center font-semibold">Participant</h3>
 
                 <video
                   ref={remoteVideoRef}
@@ -145,11 +202,9 @@ const streamRef = useRef(null);
                   className="h-full w-full object-cover"
                 />
               </div>
-
             </div>
 
             <div className="mt-6 flex justify-center flex-wrap gap-4">
-
               <button
                 onClick={toggleMute}
                 className="rounded-xl bg-yellow-500 px-4 py-2 font-medium"
@@ -161,9 +216,7 @@ const streamRef = useRef(null);
                 onClick={toggleCamera}
                 className="rounded-xl bg-indigo-500 px-4 py-2 font-medium"
               >
-                {isCameraOff
-                  ? "Turn Camera On"
-                  : "Turn Camera Off"}
+                {isCameraOff ? "Turn Camera On" : "Turn Camera Off"}
               </button>
 
               <button
@@ -172,40 +225,27 @@ const streamRef = useRef(null);
               >
                 Leave Meeting
               </button>
-
             </div>
-
           </div>
 
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-
-            <h3 className="mb-4 text-xl font-semibold">
-              Participants
-            </h3>
+            <h3 className="mb-4 text-xl font-semibold">Participants</h3>
 
             <div className="mb-6 rounded-xl bg-slate-800 p-4">
               {participants} Participant(s)
             </div>
 
-            <h3 className="mb-4 text-xl font-semibold">
-              Chat
-            </h3>
+            <h3 className="mb-4 text-xl font-semibold">Chat</h3>
 
             <div className="mb-4 h-[250px] overflow-y-auto rounded-xl bg-slate-800 p-4">
-
               {messages.map((msg, index) => (
-                <div
-                  key={index}
-                  className="mb-2 rounded-lg bg-slate-700 p-2"
-                >
+                <div key={index} className="mb-2 rounded-lg bg-slate-700 p-2">
                   {msg.message}
                 </div>
               ))}
-
             </div>
 
             <div className="flex gap-2">
-
               <input
                 type="text"
                 placeholder="Type a message..."
@@ -220,13 +260,9 @@ const streamRef = useRef(null);
               >
                 Send
               </button>
-
             </div>
-
           </div>
-
         </div>
-
       </div>
     </div>
   );

@@ -46,17 +46,20 @@ io.on("connection", (socket) => {
 
     socket.roomId = roomId;
 
+    const roomSize = io.sockets.adapter.rooms.get(roomId)?.size || 0;
+
     console.log(`Socket ${socket.id} joined room ${roomId}`);
 
-    io.to(roomId).emit(
-      "participant-count",
-      io.sockets.adapter.rooms.get(roomId)?.size || 0,
-    );
+    io.to(roomId).emit("participant-count", roomSize);
 
     socket.to(roomId).emit("receive-message", {
       message: "🟢 A participant joined the meeting",
       system: true,
     });
+
+    if (roomSize === 2) {
+      io.to(roomId).emit("ready");
+    }
   });
 
   socket.on("send-message", ({ roomId, message }) => {
