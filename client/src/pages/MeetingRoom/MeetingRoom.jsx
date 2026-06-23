@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import Peer from "simple-peer";
 import { useParams, useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 
@@ -18,6 +19,8 @@ function MeetingRoom() {
   const remoteVideoRef = useRef(null);
   const videoRef = useRef(null);
   const localStreamRef = useRef(null);
+  const peerRef = useRef(null);
+const streamRef = useRef(null);
 
   useEffect(() => {
     socket.emit("join-room", roomId);
@@ -49,6 +52,7 @@ function MeetingRoom() {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
+        streamRef.current = stream;
       } catch (error) {
         console.log(error);
         alert("Camera permission denied");
