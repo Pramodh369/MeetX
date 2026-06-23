@@ -46,59 +46,50 @@ io.on("connection", (socket) => {
 
     socket.roomId = roomId;
 
-    console.log(
-      `Socket ${socket.id} joined room ${roomId}`
-    );
+    console.log(`Socket ${socket.id} joined room ${roomId}`);
 
     io.to(roomId).emit(
       "participant-count",
-      io.sockets.adapter.rooms.get(roomId)?.size || 0
+      io.sockets.adapter.rooms.get(roomId)?.size || 0,
     );
 
-    socket.to(roomId).emit(
-      "receive-message",
-      {
-        message: "🟢 A participant joined the meeting",
-        system: true,
-      }
-    );
+    socket.to(roomId).emit("receive-message", {
+      message: "🟢 A participant joined the meeting",
+      system: true,
+    });
   });
 
-  socket.on(
-    "send-message",
-    ({ roomId, message }) => {
-      io.to(roomId).emit(
-        "receive-message",
-        {
-          message,
-          socketId: socket.id,
-        }
-      );
-    }
-  );
+  socket.on("send-message", ({ roomId, message }) => {
+    io.to(roomId).emit("receive-message", {
+      message,
+      socketId: socket.id,
+    });
+  });
+  socket.on("offer", (data) => {
+    socket.to(data.roomId).emit("offer", data);
+  });
+
+  socket.on("answer", (data) => {
+    socket.to(data.roomId).emit("answer", data);
+  });
+
+  socket.on("ice-candidate", (data) => {
+    socket.to(data.roomId).emit("ice-candidate", data);
+  });
 
   socket.on("disconnect", () => {
-    console.log(
-      "User Disconnected:",
-      socket.id
-    );
+    console.log("User Disconnected:", socket.id);
 
     if (socket.roomId) {
-      socket.to(socket.roomId).emit(
-        "receive-message",
-        {
-          message:
-            "🔴 A participant left the meeting",
-          system: true,
-        }
-      );
+      socket.to(socket.roomId).emit("receive-message", {
+        message: "🔴 A participant left the meeting",
+        system: true,
+      });
 
       setTimeout(() => {
         io.to(socket.roomId).emit(
           "participant-count",
-          io.sockets.adapter.rooms.get(
-            socket.roomId
-          )?.size || 0
+          io.sockets.adapter.rooms.get(socket.roomId)?.size || 0,
         );
       }, 100);
     }
