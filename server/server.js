@@ -69,10 +69,12 @@ io.on("connection", (socket) => {
     });
   });
   socket.on("offer", (data) => {
+    console.log("SERVER RECEIVED OFFER");
     socket.to(data.roomId).emit("offer", data);
   });
 
   socket.on("answer", (data) => {
+    console.log("SERVER RECEIVED ANSWER");
     socket.to(data.roomId).emit("answer", data);
   });
 

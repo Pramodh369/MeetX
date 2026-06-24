@@ -22,9 +22,9 @@ e.preventDefault();
 
 try {
   const { data } = await axios.post(
-    "http://localhost:5000/api/auth/login",
-    formData
-  );
+  "http://192.168.1.27:5000/api/auth/login",
+  formData
+);
 
   localStorage.setItem("token", data.token);
 

@@ -28,7 +28,7 @@ function Dashboard() {
     try {
       const token = localStorage.getItem("token");
       const { data } = await axios.post(
-        "http://localhost:5000/api/meeting/create",
+        "http://192.168.1.27:5000/api/meeting/create",
         {},
         {
           headers: {
@@ -48,7 +48,7 @@ function Dashboard() {
       const token = localStorage.getItem("token");
 
       const { data } = await axios.get(
-        "http://localhost:5000/api/meeting/my-meetings",
+        "http://192.168.1.27:5000/api/meeting/my-meetings",
         {
           headers: {
             Authorization: `Bearer ${token}`,
