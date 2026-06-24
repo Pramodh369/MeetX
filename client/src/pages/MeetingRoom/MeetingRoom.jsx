@@ -16,10 +16,12 @@ function MeetingRoom() {
   const [isCameraOff, setIsCameraOff] = useState(false);
   const [remoteConnected, setRemoteConnected] = useState(false);
   const [mediaError, setMediaError] = useState(null);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const localStreamRef = useRef(null);
+  const screenStreamRef = useRef(null);
   const peerRef = useRef(null);
   const isInitiatorRef = useRef(false);
   const isReadyRef = useRef(false);
@@ -27,7 +29,6 @@ function MeetingRoom() {
   const createInitiatorPeerRef = useRef(null);
   const createAnswererPeerRef = useRef(null);
 
-  // ─── Create Initiator Peer ────────────────────────────────────────────────
   const createInitiatorPeer = useCallback(() => {
     if (peerRef.current) return;
 
@@ -57,7 +58,6 @@ function MeetingRoom() {
     peerRef.current = peer;
   }, [roomId]);
 
-  // ─── Create Answerer Peer ─────────────────────────────────────────────────
   const createAnswererPeer = useCallback((incomingSignal) => {
     if (peerRef.current) return;
 
@@ -91,9 +91,8 @@ function MeetingRoom() {
   createInitiatorPeerRef.current = createInitiatorPeer;
   createAnswererPeerRef.current = createAnswererPeer;
 
-  // ─── Step 1: Get Camera + Mic ─────────────────────────────────────────────
   useEffect(() => {
-    let isMounted = true; // guards against StrictMode double-invoke
+    let isMounted = true;
 
     const getMedia = async () => {
       try {
@@ -139,7 +138,6 @@ function MeetingRoom() {
     };
   }, []);
 
-  // ─── Step 2: Socket Events ────────────────────────────────────────────────
   useEffect(() => {
     socket.emit("join-room", roomId);
 
@@ -186,7 +184,76 @@ function MeetingRoom() {
     };
   }, [roomId]);
 
-  // ─── Controls ─────────────────────────────────────────────────────────────
+  const replaceVideoTrack = (newTrack) => {
+    if (!peerRef.current) return;
+    const pc = peerRef.current._pc;
+    if (!pc) return;
+    const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
+    if (sender) {
+      sender.replaceTrack(newTrack);
+    }
+  };
+
+  const toggleScreenShare = async () => {
+    if (isScreenSharing) {
+      // Stop screen sharing, restore camera
+      if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach((t) => t.stop());
+        screenStreamRef.current = null;
+      }
+
+      const cameraTrack = localStreamRef.current?.getVideoTracks()[0];
+      if (cameraTrack) {
+        replaceVideoTrack(cameraTrack);
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = localStreamRef.current;
+        }
+      }
+
+      setIsScreenSharing(false);
+    } else {
+      try {
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: false,
+        });
+
+        screenStreamRef.current = screenStream;
+        const screenTrack = screenStream.getVideoTracks()[0];
+
+        // When user stops sharing via browser UI
+        screenTrack.onended = () => {
+          if (screenStreamRef.current) {
+            screenStreamRef.current.getTracks().forEach((t) => t.stop());
+            screenStreamRef.current = null;
+          }
+          const cameraTrack = localStreamRef.current?.getVideoTracks()[0];
+          if (cameraTrack) {
+            replaceVideoTrack(cameraTrack);
+            if (localVideoRef.current) {
+              localVideoRef.current.srcObject = localStreamRef.current;
+            }
+          }
+          setIsScreenSharing(false);
+        };
+
+        replaceVideoTrack(screenTrack);
+
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = screenStream;
+        }
+
+        setIsScreenSharing(true);
+      } catch (err) {
+        console.error("Screen share error:", err);
+        if (err.name !== "NotAllowedError") {
+          setMediaError(`Screen share failed: ${err.message}`);
+          setTimeout(() => setMediaError(null), 4000);
+        }
+      }
+    }
+  };
+
   const toggleMute = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
     if (!track) return;
@@ -208,6 +275,10 @@ function MeetingRoom() {
   };
 
   const leaveMeeting = () => {
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach((t) => t.stop());
+      screenStreamRef.current = null;
+    }
     peerRef.current?.destroy();
     peerRef.current = null;
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
@@ -215,12 +286,10 @@ function MeetingRoom() {
     navigate("/dashboard");
   };
 
-  // ─── UI ───────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen px-6 py-10">
       <div className="mx-auto max-w-7xl">
 
-        {/* Header */}
         <div className="mb-8 rounded-3xl border border-white/10 bg-white/5 p-8">
           <h1 className="text-4xl font-bold">Meeting Room</h1>
           <p className="mt-3 text-slate-400">Room ID: {roomId}</p>
@@ -228,14 +297,12 @@ function MeetingRoom() {
 
         <div className="grid gap-6 lg:grid-cols-3">
 
-          {/* Video Grid */}
           <div className="lg:col-span-2 rounded-3xl border border-white/10 bg-white/5 p-8">
             <div className="grid h-[450px] gap-4 md:grid-cols-2">
 
-              {/* Local */}
               <div className="relative overflow-hidden rounded-2xl bg-slate-800 flex items-center justify-center">
                 <p className="absolute top-2 left-2 z-10 text-xs font-semibold bg-black/50 px-2 py-1 rounded">
-                  You {isMuted ? "🔇" : ""} {isCameraOff ? "📷✗" : ""}
+                  You {isMuted ? "🔇" : ""} {isCameraOff ? "📷✗" : ""} {isScreenSharing ? "🖥️" : ""}
                 </p>
                 {mediaError ? (
                   <p className="text-red-400 text-sm text-center px-4">{mediaError}</p>
@@ -245,11 +312,10 @@ function MeetingRoom() {
                   autoPlay
                   playsInline
                   muted
-                  className="h-full w-full object-cover -scale-x-100"
+                  className={`h-full w-full object-cover ${isScreenSharing ? "" : "-scale-x-100"}`}
                 />
               </div>
 
-              {/* Remote */}
               <div className="relative overflow-hidden rounded-2xl bg-slate-800 flex items-center justify-center">
                 <p className="absolute top-2 left-2 z-10 text-xs font-semibold bg-black/50 px-2 py-1 rounded">
                   Participant
@@ -266,7 +332,6 @@ function MeetingRoom() {
               </div>
             </div>
 
-            {/* Controls */}
             <div className="mt-6 flex justify-center flex-wrap gap-4">
               <button
                 onClick={toggleMute}
@@ -283,6 +348,13 @@ function MeetingRoom() {
               </button>
 
               <button
+                onClick={toggleScreenShare}
+                className={`rounded-xl px-4 py-2 font-medium ${isScreenSharing ? "bg-green-600 hover:bg-green-700" : "bg-slate-600 hover:bg-slate-700"}`}
+              >
+                {isScreenSharing ? "Stop Sharing 🖥️" : "Share Screen 🖥️"}
+              </button>
+
+              <button
                 onClick={leaveMeeting}
                 className="rounded-xl bg-red-600 px-4 py-2 font-medium hover:bg-red-700"
               >
@@ -291,7 +363,6 @@ function MeetingRoom() {
             </div>
           </div>
 
-          {/* Sidebar */}
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6 flex flex-col">
             <h3 className="mb-4 text-xl font-semibold">Participants</h3>
             <div className="mb-6 rounded-xl bg-slate-800 p-4 text-sm">
