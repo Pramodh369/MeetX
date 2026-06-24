@@ -38,19 +38,40 @@ app.get("/", (req, res) => {
 
 /* Socket.io */
 
+const socketNames = {}; // socketId -> userName
+
 io.on("connection", (socket) => {
   console.log("User Connected:", socket.id);
 
-  socket.on("join-room", (roomId) => {
-    socket.join(roomId);
+  socket.on("join-room", (payload) => {
+    // Accept both old shape (string) and new shape ({ roomId, userName })
+    const roomId = typeof payload === "string" ? payload : payload.roomId;
+    const userName =
+      typeof payload === "string"
+        ? "Participant"
+        : payload.userName || "Participant";
 
+    socket.join(roomId);
     socket.roomId = roomId;
+    socketNames[socket.id] = userName;
 
     const roomSize = io.sockets.adapter.rooms.get(roomId)?.size || 0;
 
     console.log(`Socket ${socket.id} joined room ${roomId}`);
 
     io.to(roomId).emit("participant-count", roomSize);
+
+    // Send each existing participant's name back to the new joiner
+    io.sockets.adapter.rooms.get(roomId)?.forEach((existingSocketId) => {
+      if (existingSocketId !== socket.id && socketNames[existingSocketId]) {
+        socket.emit("remote-user-name", {
+          userName: socketNames[existingSocketId],
+        });
+      }
+    });
+
+    // Send the new joiner's name to everyone else in the room
+    socket.to(roomId).emit("remote-user-name", { userName });
 
     socket.to(roomId).emit("receive-message", {
       message: "🟢 A participant joined the meeting",
@@ -68,6 +89,7 @@ io.on("connection", (socket) => {
       socketId: socket.id,
     });
   });
+
   socket.on("offer", (data) => {
     console.log("SERVER RECEIVED OFFER");
     socket.to(data.roomId).emit("offer", data);
@@ -84,6 +106,8 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     console.log("User Disconnected:", socket.id);
+
+    delete socketNames[socket.id];
 
     if (socket.roomId) {
       socket.to(socket.roomId).emit("receive-message", {

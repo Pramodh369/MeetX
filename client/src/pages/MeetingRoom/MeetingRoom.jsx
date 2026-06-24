@@ -9,7 +9,12 @@ function MeetingRoom() {
   const { roomId } = useParams();
   const navigate = useNavigate();
 
+  // ─── Read logged-in user from localStorage ──────────────────────────────
+  const localUser = JSON.parse(localStorage.getItem("user")) || {};
+  const localUserName = localUser.name || "You";
+
   const [participants, setParticipants] = useState(0);
+  const [remoteUserName, setRemoteUserName] = useState(null); // null = not joined yet
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [isMuted, setIsMuted] = useState(false);
@@ -30,10 +35,9 @@ function MeetingRoom() {
   const createInitiatorPeerRef = useRef(null);
   const createAnswererPeerRef = useRef(null);
 
+  // ─── Meeting Timer ───────────────────────────────────────────────────────
   useEffect(() => {
-    const interval = setInterval(() => {
-      setElapsed((prev) => prev + 1);
-    }, 1000);
+    const interval = setInterval(() => setElapsed((prev) => prev + 1), 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -44,6 +48,7 @@ function MeetingRoom() {
     return [h, m, s].map((v) => String(v).padStart(2, "0")).join(":");
   };
 
+  // ─── WebRTC — Initiator Peer (untouched logic) ───────────────────────────
   const createInitiatorPeer = useCallback(() => {
     if (peerRef.current) return;
 
@@ -66,6 +71,7 @@ function MeetingRoom() {
 
     peer.on("close", () => {
       setRemoteConnected(false);
+      setRemoteUserName(null);
       peerRef.current = null;
       if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     });
@@ -73,6 +79,7 @@ function MeetingRoom() {
     peerRef.current = peer;
   }, [roomId]);
 
+  // ─── WebRTC — Answerer Peer (untouched logic) ────────────────────────────
   const createAnswererPeer = useCallback((incomingSignal) => {
     if (peerRef.current) return;
 
@@ -95,6 +102,7 @@ function MeetingRoom() {
 
     peer.on("close", () => {
       setRemoteConnected(false);
+      setRemoteUserName(null);
       peerRef.current = null;
       if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     });
@@ -106,6 +114,7 @@ function MeetingRoom() {
   createInitiatorPeerRef.current = createInitiatorPeer;
   createAnswererPeerRef.current = createAnswererPeer;
 
+  // ─── Get local media (untouched logic) ───────────────────────────────────
   useEffect(() => {
     let isMounted = true;
 
@@ -127,10 +136,7 @@ function MeetingRoom() {
         }
 
         localStreamRef.current = stream;
-
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
-        }
+        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
         if (isReadyRef.current && isInitiatorRef.current) {
           createInitiatorPeerRef.current();
@@ -147,20 +153,17 @@ function MeetingRoom() {
     };
 
     getMedia();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
 
+  // ─── Socket events ────────────────────────────────────────────────────────
   useEffect(() => {
-    socket.emit("join-room", roomId);
+    // Send name with join — new payload shape; server handles both old & new
+    socket.emit("join-room", { roomId, userName: localUserName });
 
     socket.on("participant-count", (count) => {
       setParticipants(count);
-      if (count === 1) {
-        isInitiatorRef.current = true;
-      }
+      if (count === 1) isInitiatorRef.current = true;
     });
 
     socket.on("ready", () => {
@@ -180,9 +183,12 @@ function MeetingRoom() {
     });
 
     socket.on("answer", ({ signal }) => {
-      if (peerRef.current) {
-        peerRef.current.signal(signal);
-      }
+      if (peerRef.current) peerRef.current.signal(signal);
+    });
+
+    // Receive the remote participant's name
+    socket.on("remote-user-name", ({ userName }) => {
+      setRemoteUserName(userName);
     });
 
     socket.on("receive-message", (data) => {
@@ -194,19 +200,19 @@ function MeetingRoom() {
       socket.off("ready");
       socket.off("offer");
       socket.off("answer");
+      socket.off("remote-user-name");
       socket.off("receive-message");
       socket.emit("leave-room", roomId);
     };
-  }, [roomId]);
+  }, [roomId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ─── Screen Share (untouched logic) ──────────────────────────────────────
   const replaceVideoTrack = (newTrack) => {
     if (!peerRef.current) return;
     const pc = peerRef.current._pc;
     if (!pc) return;
     const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
-    if (sender) {
-      sender.replaceTrack(newTrack);
-    }
+    if (sender) sender.replaceTrack(newTrack);
   };
 
   const toggleScreenShare = async () => {
@@ -215,15 +221,11 @@ function MeetingRoom() {
         screenStreamRef.current.getTracks().forEach((t) => t.stop());
         screenStreamRef.current = null;
       }
-
       const cameraTrack = localStreamRef.current?.getVideoTracks()[0];
       if (cameraTrack) {
         replaceVideoTrack(cameraTrack);
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = localStreamRef.current;
-        }
+        if (localVideoRef.current) localVideoRef.current.srcObject = localStreamRef.current;
       }
-
       setIsScreenSharing(false);
     } else {
       try {
@@ -231,7 +233,6 @@ function MeetingRoom() {
           video: true,
           audio: false,
         });
-
         screenStreamRef.current = screenStream;
         const screenTrack = screenStream.getVideoTracks()[0];
 
@@ -243,19 +244,13 @@ function MeetingRoom() {
           const cameraTrack = localStreamRef.current?.getVideoTracks()[0];
           if (cameraTrack) {
             replaceVideoTrack(cameraTrack);
-            if (localVideoRef.current) {
-              localVideoRef.current.srcObject = localStreamRef.current;
-            }
+            if (localVideoRef.current) localVideoRef.current.srcObject = localStreamRef.current;
           }
           setIsScreenSharing(false);
         };
 
         replaceVideoTrack(screenTrack);
-
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = screenStream;
-        }
-
+        if (localVideoRef.current) localVideoRef.current.srcObject = screenStream;
         setIsScreenSharing(true);
       } catch (err) {
         console.error("Screen share error:", err);
@@ -267,6 +262,7 @@ function MeetingRoom() {
     }
   };
 
+  // ─── Controls (untouched logic) ──────────────────────────────────────────
   const toggleMute = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
     if (!track) return;
@@ -299,10 +295,12 @@ function MeetingRoom() {
     navigate("/dashboard");
   };
 
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen px-6 py-10">
       <div className="mx-auto max-w-7xl">
 
+        {/* Header */}
         <div className="mb-8 rounded-3xl border border-white/10 bg-white/5 p-8">
           <h1 className="text-4xl font-bold">Meeting Room</h1>
           <div className="mt-3 flex items-center gap-4 flex-wrap">
@@ -316,16 +314,42 @@ function MeetingRoom() {
 
         <div className="grid gap-6 lg:grid-cols-3">
 
+          {/* Video Area */}
           <div className="lg:col-span-2 rounded-3xl border border-white/10 bg-white/5 p-8">
             <div className="grid h-[450px] gap-4 md:grid-cols-2">
 
+              {/* ── Local Video ── */}
               <div className="relative overflow-hidden rounded-2xl bg-slate-800 flex items-center justify-center">
-                <p className="absolute top-2 left-2 z-10 text-xs font-semibold bg-black/50 px-2 py-1 rounded">
-                  You {isMuted ? "🔇" : ""} {isCameraOff ? "📷✗" : ""} {isScreenSharing ? "🖥️" : ""}
-                </p>
-                {mediaError ? (
-                  <p className="text-red-400 text-sm text-center px-4">{mediaError}</p>
-                ) : null}
+                {/* Name badge */}
+                <div className="absolute top-0 left-0 right-0 z-10 flex items-center gap-2 px-3 py-2 bg-gradient-to-b from-black/70 to-transparent">
+                  <span className="text-xs font-semibold text-white truncate">
+                    {localUserName}
+                  </span>
+                  <div className="flex items-center gap-1 ml-auto">
+                    {isMuted && (
+                      <span className="text-xs bg-red-500/80 px-1.5 py-0.5 rounded text-white">
+                        🔇
+                      </span>
+                    )}
+                    {isCameraOff && (
+                      <span className="text-xs bg-red-500/80 px-1.5 py-0.5 rounded text-white">
+                        📷✗
+                      </span>
+                    )}
+                    {isScreenSharing && (
+                      <span className="text-xs bg-green-500/80 px-1.5 py-0.5 rounded text-white">
+                        🖥️ Sharing
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {mediaError && (
+                  <p className="absolute inset-0 flex items-center justify-center text-red-400 text-sm text-center px-4 z-10">
+                    {mediaError}
+                  </p>
+                )}
+
                 <video
                   ref={localVideoRef}
                   autoPlay
@@ -335,22 +359,46 @@ function MeetingRoom() {
                 />
               </div>
 
+              {/* ── Remote Video ── */}
               <div className="relative overflow-hidden rounded-2xl bg-slate-800 flex items-center justify-center">
-                <p className="absolute top-2 left-2 z-10 text-xs font-semibold bg-black/50 px-2 py-1 rounded">
-                  Participant
-                </p>
+                {/* Name badge — always visible */}
+                <div className="absolute top-0 left-0 right-0 z-10 flex items-center px-3 py-2 bg-gradient-to-b from-black/70 to-transparent">
+                  <span className="text-xs font-semibold text-white truncate">
+                    {remoteUserName ?? "Participant"}
+                  </span>
+                </div>
+
+                {/* Waiting state — shown when no remote stream yet */}
                 {!remoteConnected && (
-                  <p className="text-slate-500 text-sm">Waiting for participant...</p>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10">
+                    {/* Pulsing avatar */}
+                    <div className="relative flex items-center justify-center">
+                      <span className="absolute inline-flex h-14 w-14 rounded-full bg-slate-600/40 animate-ping" />
+                      <span className="relative inline-flex h-14 w-14 rounded-full bg-slate-700 items-center justify-center text-2xl">
+                        👤
+                      </span>
+                    </div>
+                    <p className="text-slate-300 text-sm font-medium">
+                      Waiting for participant…
+                    </p>
+                    <p className="text-slate-500 text-xs">
+                      Share the Room ID to invite someone
+                    </p>
+                  </div>
                 )}
+
                 <video
                   ref={remoteVideoRef}
                   autoPlay
                   playsInline
-                  className="h-full w-full object-cover"
+                  className={`h-full w-full object-cover transition-opacity duration-300 ${
+                    remoteConnected ? "opacity-100" : "opacity-0"
+                  }`}
                 />
               </div>
             </div>
 
+            {/* Controls */}
             <div className="mt-6 flex justify-center flex-wrap gap-4">
               <button
                 onClick={toggleMute}
@@ -368,7 +416,11 @@ function MeetingRoom() {
 
               <button
                 onClick={toggleScreenShare}
-                className={`rounded-xl px-4 py-2 font-medium ${isScreenSharing ? "bg-green-600 hover:bg-green-700" : "bg-slate-600 hover:bg-slate-700"}`}
+                className={`rounded-xl px-4 py-2 font-medium ${
+                  isScreenSharing
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-slate-600 hover:bg-slate-700"
+                }`}
               >
                 {isScreenSharing ? "Stop Sharing 🖥️" : "Share Screen 🖥️"}
               </button>
@@ -382,10 +434,33 @@ function MeetingRoom() {
             </div>
           </div>
 
+          {/* Sidebar — Participants + Chat */}
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6 flex flex-col">
             <h3 className="mb-4 text-xl font-semibold">Participants</h3>
-            <div className="mb-6 rounded-xl bg-slate-800 p-4 text-sm">
-              {participants} Participant(s)
+            <div className="mb-6 rounded-xl bg-slate-800 p-4 text-sm space-y-2">
+              {/* Local user always shown */}
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-500 text-xs font-bold text-white shrink-0">
+                  {localUserName.charAt(0).toUpperCase()}
+                </span>
+                <span className="truncate text-slate-200">{localUserName}</span>
+                <span className="ml-auto text-xs text-indigo-400 shrink-0">You</span>
+              </div>
+
+              {/* Remote user — shown only when connected */}
+              {remoteConnected && remoteUserName && (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-xs font-bold text-white shrink-0">
+                    {remoteUserName.charAt(0).toUpperCase()}
+                  </span>
+                  <span className="truncate text-slate-200">{remoteUserName}</span>
+                </div>
+              )}
+
+              {/* Count */}
+              <p className="pt-1 text-xs text-slate-500 border-t border-white/5">
+                {participants} participant{participants !== 1 ? "s" : ""} in room
+              </p>
             </div>
 
             <h3 className="mb-4 text-xl font-semibold">Chat</h3>
@@ -394,7 +469,9 @@ function MeetingRoom() {
                 <div
                   key={i}
                   className={`rounded-lg p-2 text-sm ${
-                    msg.system ? "bg-slate-700 text-slate-400 italic" : "bg-slate-700"
+                    msg.system
+                      ? "bg-slate-700/50 text-slate-400 italic"
+                      : "bg-slate-700 text-slate-200"
                   }`}
                 >
                   {msg.message}
