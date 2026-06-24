@@ -17,6 +17,7 @@ function MeetingRoom() {
   const [remoteConnected, setRemoteConnected] = useState(false);
   const [mediaError, setMediaError] = useState(null);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -28,6 +29,20 @@ function MeetingRoom() {
   const pendingOfferRef = useRef(null);
   const createInitiatorPeerRef = useRef(null);
   const createAnswererPeerRef = useRef(null);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsed((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const formatTime = (seconds) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return [h, m, s].map((v) => String(v).padStart(2, "0")).join(":");
+  };
 
   const createInitiatorPeer = useCallback(() => {
     if (peerRef.current) return;
@@ -196,7 +211,6 @@ function MeetingRoom() {
 
   const toggleScreenShare = async () => {
     if (isScreenSharing) {
-      // Stop screen sharing, restore camera
       if (screenStreamRef.current) {
         screenStreamRef.current.getTracks().forEach((t) => t.stop());
         screenStreamRef.current = null;
@@ -221,7 +235,6 @@ function MeetingRoom() {
         screenStreamRef.current = screenStream;
         const screenTrack = screenStream.getVideoTracks()[0];
 
-        // When user stops sharing via browser UI
         screenTrack.onended = () => {
           if (screenStreamRef.current) {
             screenStreamRef.current.getTracks().forEach((t) => t.stop());
@@ -292,7 +305,13 @@ function MeetingRoom() {
 
         <div className="mb-8 rounded-3xl border border-white/10 bg-white/5 p-8">
           <h1 className="text-4xl font-bold">Meeting Room</h1>
-          <p className="mt-3 text-slate-400">Room ID: {roomId}</p>
+          <div className="mt-3 flex items-center gap-4 flex-wrap">
+            <p className="text-slate-400">Room ID: {roomId}</p>
+            <span className="text-slate-500">•</span>
+            <p className="font-mono text-slate-300 text-sm tracking-widest bg-slate-800 px-3 py-1 rounded-lg">
+              ⏱ {formatTime(elapsed)}
+            </p>
+          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
