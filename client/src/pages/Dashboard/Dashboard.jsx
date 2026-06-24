@@ -28,7 +28,7 @@ function Dashboard() {
     try {
       const token = localStorage.getItem("token");
       const { data } = await axios.post(
-        "http://192.168.1.27:5000/api/meeting/create",
+        `${import.meta.env.VITE_API_URL}/api/meeting/create`,
         {},
         {
           headers: {
@@ -48,7 +48,7 @@ function Dashboard() {
       const token = localStorage.getItem("token");
 
       const { data } = await axios.get(
-        "http://192.168.1.27:5000/api/meeting/my-meetings",
+        `${import.meta.env.VITE_API_URL}/api/meeting/my-meetings`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -69,7 +69,10 @@ function Dashboard() {
       {" "}
       <div className="mx-auto max-w-7xl">
         {/* Welcome Card */}
-        <div className="mb-8 rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-xl">
+        <div
+          data-aos="fade-down"
+          className="mb-8 rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-xl"
+        >
           <h1 className="text-4xl font-bold">Welcome, {user?.name}</h1>
 
           <p className="mt-2 text-slate-400">{user?.email}</p>
@@ -77,22 +80,34 @@ function Dashboard() {
 
         {/* Stats */}
         <div className="grid gap-6 md:grid-cols-3">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-            <h3 className="text-slate-400">Meetings Created</h3>
+          <div
+            data-aos="zoom-in"
+            data-aos-delay="0"
+            className="rounded-3xl border border-white/10 bg-white/5 p-6"
+          >
+            <h3 className="text-slate-400">🎥 Meetings Created</h3>
 
             <p className="mt-3 text-4xl font-bold">{meetings.length}</p>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-            <h3 className="text-slate-400">Meetings Joined</h3>
+          <div
+            data-aos="zoom-in"
+            data-aos-delay="150"
+            className="rounded-3xl border border-white/10 bg-white/5 p-6"
+          >
+            <h3 className="text-slate-400">👥 Meetings Joined</h3>
 
             <p className="mt-3 text-4xl font-bold">0</p>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-            <h3 className="text-slate-400">Hours Spent</h3>
+          <div
+            data-aos="zoom-in"
+            data-aos-delay="300"
+            className="rounded-3xl border border-white/10 bg-white/5 p-6"
+          >
+            <h3 className="text-slate-400">⏱ Hours Spent</h3>
 
-             <p className="mt-3 text-4xl font-bold">0</p>
+            <p className="mt-3 text-2xl font-bold">Coming Soon</p>
           </div>
         </div>
 
@@ -129,7 +144,10 @@ function Dashboard() {
             Logout
           </button>
         </div>
-        <div className="mt-12 rounded-3xl border border-white/10 bg-white/5 p-6">
+        <div
+          data-aos="fade-up"
+          className="mt-12 rounded-3xl border border-white/10 bg-white/5 p-6"
+        >
           <h2 className="mb-6 text-2xl font-bold">Recent Meetings</h2>
 
           <div className="space-y-3">
@@ -137,9 +155,27 @@ function Dashboard() {
               <div
                 key={meeting._id}
                 onClick={() => navigate(`/meeting/${meeting.roomId}`)}
-                className="cursor-pointer rounded-xl border border-white/10 p-4 transition hover:bg-white/5"
+                className="group cursor-pointer rounded-2xl border border-white/10 p-5 transition-all duration-300 hover:translate-x-2 hover:border-indigo-500/30 hover:bg-white/5"
               >
-                {meeting.roomId}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-lg font-semibold">📹 {meeting.roomId}</p>
+
+                    <p className="mt-1 text-sm text-slate-400">
+                      Click to join meeting
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigator.clipboard.writeText(meeting.roomId);
+                    }}
+                    className="rounded-lg border border-white/10 px-3 py-1 text-sm transition hover:bg-white/5"
+                  >
+                    📋
+                  </button>
+                </div>
               </div>
             ))}
 

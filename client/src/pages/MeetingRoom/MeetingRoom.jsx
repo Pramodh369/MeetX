@@ -3,7 +3,7 @@ import Peer from "simple-peer";
 import { useParams, useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 
-const socket = io("http://192.168.1.27:5000");
+const socket = io(import.meta.env.VITE_SOCKET_URL);
 
 function MeetingRoom() {
   const { roomId } = useParams();
