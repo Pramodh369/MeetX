@@ -20,12 +20,21 @@ const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: ["http://localhost:5173", "https://meetx3.netlify.app"],
     methods: ["GET", "POST"],
+    credentials: true,
   },
 });
 
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://meetx3.netlify.app",
+    ],
+    credentials: true,
+  }),
+);
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
