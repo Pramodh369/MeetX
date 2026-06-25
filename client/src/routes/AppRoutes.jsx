@@ -1,28 +1,47 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 
-import Home from "../pages/Home/Home";
-import Login from "../pages/Login/Login";
-import Register from "../pages/Register/Register";
-import Dashboard from "../pages/Dashboard/Dashboard";
-import MeetingRoom from "../pages/MeetingRoom/MeetingRoom";
 import ProtectedRoute from "../components/auth/ProtectedRoute";
+
+const Home = lazy(() => import("../pages/Home/Home"));
+const Login = lazy(() => import("../pages/Login/Login"));
+const Register = lazy(() => import("../pages/Register/Register"));
+const Dashboard = lazy(() => import("../pages/Dashboard/Dashboard"));
+const MeetingRoom = lazy(() => import("../pages/MeetingRoom/MeetingRoom"));
+
+function Loader() {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
+    </div>
+  );
+}
 
 function AppRoutes() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/meeting/:roomId" element={<MeetingRoom />} />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-    </Routes>
+    <Suspense fallback={<Loader />}>
+      <Routes>
+        <Route path="/" element={<Home />} />
+
+        <Route path="/login" element={<Login />} />
+
+        <Route path="/register" element={<Register />} />
+
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/meeting/:roomId"
+          element={<MeetingRoom />}
+        />
+      </Routes>
+    </Suspense>
   );
 }
 
