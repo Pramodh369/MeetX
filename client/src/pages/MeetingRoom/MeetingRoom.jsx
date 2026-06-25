@@ -53,9 +53,16 @@ function MeetingRoom() {
     if (peerRef.current) return;
 
     const peer = new Peer({
-      initiator: true,
+      initiator: true, // keep false in answerer
       trickle: false,
       stream: localStreamRef.current,
+      config: {
+        iceServers: [
+          {
+            urls: "stun:stun.l.google.com:19302",
+          },
+        ],
+      },
     });
 
     peer.on("signal", (data) => {
@@ -63,7 +70,8 @@ function MeetingRoom() {
     });
 
     peer.on("stream", (remoteStream) => {
-      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream;
+      if (remoteVideoRef.current)
+        remoteVideoRef.current.srcObject = remoteStream;
       setRemoteConnected(true);
     });
 
@@ -80,36 +88,47 @@ function MeetingRoom() {
   }, [roomId]);
 
   // ─── WebRTC — Answerer Peer (untouched logic) ────────────────────────────
-  const createAnswererPeer = useCallback((incomingSignal) => {
-    if (peerRef.current) return;
+  const createAnswererPeer = useCallback(
+    (incomingSignal) => {
+      if (peerRef.current) return;
 
-    const peer = new Peer({
-      initiator: false,
-      trickle: false,
-      stream: localStreamRef.current,
-    });
+      const peer = new Peer({
+        initiator: false, // keep false in answerer
+        trickle: false,
+        stream: localStreamRef.current,
+        config: {
+          iceServers: [
+            {
+              urls: "stun:stun.l.google.com:19302",
+            },
+          ],
+        },
+      });
 
-    peer.on("signal", (data) => {
-      socket.emit("answer", { roomId, signal: data });
-    });
+      peer.on("signal", (data) => {
+        socket.emit("answer", { roomId, signal: data });
+      });
 
-    peer.on("stream", (remoteStream) => {
-      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream;
-      setRemoteConnected(true);
-    });
+      peer.on("stream", (remoteStream) => {
+        if (remoteVideoRef.current)
+          remoteVideoRef.current.srcObject = remoteStream;
+        setRemoteConnected(true);
+      });
 
-    peer.on("error", (err) => console.error("Peer error:", err));
+      peer.on("error", (err) => console.error("Peer error:", err));
 
-    peer.on("close", () => {
-      setRemoteConnected(false);
-      setRemoteUserName(null);
-      peerRef.current = null;
-      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
-    });
+      peer.on("close", () => {
+        setRemoteConnected(false);
+        setRemoteUserName(null);
+        peerRef.current = null;
+        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+      });
 
-    peerRef.current = peer;
-    peer.signal(incomingSignal);
-  }, [roomId]);
+      peerRef.current = peer;
+      peer.signal(incomingSignal);
+    },
+    [roomId],
+  );
 
   createInitiatorPeerRef.current = createInitiatorPeer;
   createAnswererPeerRef.current = createAnswererPeer;
@@ -153,7 +172,9 @@ function MeetingRoom() {
     };
 
     getMedia();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // ─── Socket events ────────────────────────────────────────────────────────
@@ -211,7 +232,9 @@ function MeetingRoom() {
     if (!peerRef.current) return;
     const pc = peerRef.current._pc;
     if (!pc) return;
-    const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
+    const sender = pc
+      .getSenders()
+      .find((s) => s.track && s.track.kind === "video");
     if (sender) sender.replaceTrack(newTrack);
   };
 
@@ -224,7 +247,8 @@ function MeetingRoom() {
       const cameraTrack = localStreamRef.current?.getVideoTracks()[0];
       if (cameraTrack) {
         replaceVideoTrack(cameraTrack);
-        if (localVideoRef.current) localVideoRef.current.srcObject = localStreamRef.current;
+        if (localVideoRef.current)
+          localVideoRef.current.srcObject = localStreamRef.current;
       }
       setIsScreenSharing(false);
     } else {
@@ -244,13 +268,15 @@ function MeetingRoom() {
           const cameraTrack = localStreamRef.current?.getVideoTracks()[0];
           if (cameraTrack) {
             replaceVideoTrack(cameraTrack);
-            if (localVideoRef.current) localVideoRef.current.srcObject = localStreamRef.current;
+            if (localVideoRef.current)
+              localVideoRef.current.srcObject = localStreamRef.current;
           }
           setIsScreenSharing(false);
         };
 
         replaceVideoTrack(screenTrack);
-        if (localVideoRef.current) localVideoRef.current.srcObject = screenStream;
+        if (localVideoRef.current)
+          localVideoRef.current.srcObject = screenStream;
         setIsScreenSharing(true);
       } catch (err) {
         console.error("Screen share error:", err);
@@ -299,7 +325,6 @@ function MeetingRoom() {
   return (
     <div className="min-h-screen px-6 py-10">
       <div className="mx-auto max-w-7xl">
-
         {/* Header */}
         <div className="mb-8 rounded-3xl border border-white/10 bg-white/5 p-8">
           <h1 className="text-4xl font-bold">Meeting Room</h1>
@@ -313,11 +338,9 @@ function MeetingRoom() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
-
           {/* Video Area */}
           <div className="lg:col-span-2 rounded-3xl border border-white/10 bg-white/5 p-8">
             <div className="grid h-[450px] gap-4 md:grid-cols-2">
-
               {/* ── Local Video ── */}
               <div className="relative overflow-hidden rounded-2xl bg-slate-800 flex items-center justify-center">
                 {/* Name badge */}
@@ -444,7 +467,9 @@ function MeetingRoom() {
                   {localUserName.charAt(0).toUpperCase()}
                 </span>
                 <span className="truncate text-slate-200">{localUserName}</span>
-                <span className="ml-auto text-xs text-indigo-400 shrink-0">You</span>
+                <span className="ml-auto text-xs text-indigo-400 shrink-0">
+                  You
+                </span>
               </div>
 
               {/* Remote user — shown only when connected */}
@@ -453,13 +478,16 @@ function MeetingRoom() {
                   <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-xs font-bold text-white shrink-0">
                     {remoteUserName.charAt(0).toUpperCase()}
                   </span>
-                  <span className="truncate text-slate-200">{remoteUserName}</span>
+                  <span className="truncate text-slate-200">
+                    {remoteUserName}
+                  </span>
                 </div>
               )}
 
               {/* Count */}
               <p className="pt-1 text-xs text-slate-500 border-t border-white/5">
-                {participants} participant{participants !== 1 ? "s" : ""} in room
+                {participants} participant{participants !== 1 ? "s" : ""} in
+                room
               </p>
             </div>
 
@@ -496,7 +524,6 @@ function MeetingRoom() {
               </button>
             </div>
           </div>
-
         </div>
       </div>
     </div>
