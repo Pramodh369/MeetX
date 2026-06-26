@@ -61,35 +61,19 @@ Password: **123456**
 
 ---
 
-## Screenshots
+## 📸 Application Preview
 
-### Home
+| Landing Page | Authentication |
+|---|---|
+| ![Home](screenshots/home.png) | ![Login](screenshots/login.png) |
 
-![Home](screenshots/home.png)
+| Dashboard | Meeting Room |
+|---|---|
+| ![Dashboard](screenshots/dashboard.png) | ![meeting-room](screenshots/meeting-room.png) |
 
-### Login
-
-![Login](screenshots/login.png)
-
-### Register
-
-![Register](screenshots/register.png)
-
-### Dashboard
-
-![Dashboard](screenshots/dashboard.png)
-
-### Meeting Room
-
-![Meeting Room](screenshots/meeting-room.png)
-
-### Screen Sharing
-
-![Screen Sharing](screenshots/screen-share.png)
-
-### Application
-
-![Application](screenshots/works.png)
+| Screen Sharing | Registration |
+|---|---|
+| ![Screen Sharing](screenshots/screen-share.png) | ![Register](screenshots/register.png) |
 
 ---
 
