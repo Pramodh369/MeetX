@@ -65,16 +65,16 @@ Password: **123456**
 
 <table>
   <tr>
-    <td width="60%"><b>Landing Page</b><br/><img src="screenshots/home.png" width="100%"/></td>
-    <td width="40%"><b>Authentication</b><br/><img src="screenshots/login.png" width="100%"/></td>
+    <td align="center" width="50%"><b>Landing Page</b><br/><br/><img src="screenshots/home.png" width="100%"/></td>
+    <td align="center" width="50%"><b>Authentication</b><br/><br/><img src="screenshots/login.png" width="100%"/></td>
   </tr>
   <tr>
-    <td width="50%"><b>Dashboard</b><br/><img src="screenshots/dashboard.png" width="100%"/></td>
-    <td width="50%"><b>Meeting Room</b><br/><img src="screenshots/meeting-room.png" width="100%"/></td>
+    <td align="center" width="50%"><b>Dashboard</b><br/><br/><img src="screenshots/dashboard.png" width="100%"/></td>
+    <td align="center" width="50%"><b>Meeting Room</b><br/><br/><img src="screenshots/meeting-room.png" width="100%"/></td>
   </tr>
   <tr>
-    <td width="50%"><b>Screen Sharing</b><br/><img src="screenshots/screen-share.png" width="100%"/></td>
-    <td width="50%"><b>Registration</b><br/><img src="screenshots/register.png" width="100%"/></td>
+    <td align="center" width="50%"><b>Screen Sharing</b><br/><br/><img src="screenshots/screen-share.png" width="100%"/></td>
+    <td align="center" width="50%"><b>Registration</b><br/><br/><img src="screenshots/register.png" width="100%"/></td>
   </tr>
 </table>
 
