@@ -63,17 +63,20 @@ Password: **123456**
 
 ## 📸 Application Preview
 
-| Landing Page | Authentication |
-|---|---|
-| ![Home](screenshots/home.png) | ![Login](screenshots/login.png) |
-
-| Dashboard | Meeting Room |
-|---|---|
-| ![Dashboard](screenshots/dashboard.png) | ![meeting-room](screenshots/meeting-room.png) |
-
-| Screen Sharing | Registration |
-|---|---|
-| ![Screen Sharing](screenshots/screen-share.png) | ![Register](screenshots/register.png) |
+<table>
+  <tr>
+    <td width="60%"><b>Landing Page</b><br/><img src="screenshots/home.png" width="100%"/></td>
+    <td width="40%"><b>Authentication</b><br/><img src="screenshots/login.png" width="100%"/></td>
+  </tr>
+  <tr>
+    <td width="50%"><b>Dashboard</b><br/><img src="screenshots/dashboard.png" width="100%"/></td>
+    <td width="50%"><b>Meeting Room</b><br/><img src="screenshots/meeting-room.png" width="100%"/></td>
+  </tr>
+  <tr>
+    <td width="50%"><b>Screen Sharing</b><br/><img src="screenshots/screen-share.png" width="100%"/></td>
+    <td width="50%"><b>Registration</b><br/><img src="screenshots/register.png" width="100%"/></td>
+  </tr>
+</table>
 
 ---
 
