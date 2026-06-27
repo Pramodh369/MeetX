@@ -1,5 +1,5 @@
 # MeetX
-
+ 
 MeetX is a full-stack video collaboration platform built with the MERN stack. It allows users to securely create and join meeting rooms with real-time video communication, live chat, participant management, and a responsive user interface.
 
 The project was built to strengthen my full-stack development skills by working with authentication, WebRTC, Socket.IO, REST APIs, and cloud deployment.
@@ -65,16 +65,36 @@ Password: **123456**
 
 <table>
   <tr>
-    <td align="center" width="50%"><b>Landing Page</b><br/><br/><img src="screenshots/home.png" width="100%"/></td>
-    <td align="center" width="50%"><b>Authentication</b><br/><br/><img src="screenshots/login.png" width="100%"/></td>
+    <td align="center" width="50%">
+      <img src="screenshots/home.png" width="100%"/><br/><br/>
+      <b>Landing Page</b>
+    </td>
+    <td align="center" width="50%">
+      <img src="screenshots/login.png" width="100%"/><br/><br/>
+      <b>Authentication</b>
+    </td>
   </tr>
+
   <tr>
-    <td align="center" width="50%"><b>Dashboard</b><br/><br/><img src="screenshots/dashboard.png" width="100%"/></td>
-    <td align="center" width="50%"><b>Meeting Room</b><br/><br/><img src="screenshots/meeting-room.png" width="100%"/></td>
+    <td align="center" width="50%">
+      <img src="screenshots/dashboard.png" width="100%"/><br/><br/>
+      <b>Dashboard</b>
+    </td>
+    <td align="center" width="50%">
+      <img src="screenshots/meeting-room.png" width="100%"/><br/><br/>
+      <b>Meeting Room</b>
+    </td>
   </tr>
+
   <tr>
-    <td align="center" width="50%"><b>Screen Sharing</b><br/><br/><img src="screenshots/screen-share.png" width="100%"/></td>
-    <td align="center" width="50%"><b>Registration</b><br/><br/><img src="screenshots/register.png" width="100%"/></td>
+    <td align="center" width="50%">
+      <img src="screenshots/screen-share.png" width="100%"/><br/><br/>
+      <b>Screen Sharing</b>
+    </td>
+    <td align="center" width="50%">
+      <img src="screenshots/register.png" width="100%"/><br/><br/>
+      <b>Registration</b>
+    </td>
   </tr>
 </table>
 
